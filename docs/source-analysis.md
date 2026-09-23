@@ -60,6 +60,22 @@ Observation importante : `guid` est présent et correspond à l’URL de l’art
 
 Conclusion : ce flux est meilleur que le flux général pour une première source principale, mais il reste limité à 25 items par page. Pour éviter de manquer une annonce, il faudra probablement récupérer plusieurs pages.
 
+## Identifiant unique
+
+Les items RSS observés fournissent un `guid` stable qui correspond à l’URL de l’article Coulisses TV. Cet identifiant est préférable au titre ou à la date, car :
+
+- le titre peut varier légèrement ;
+- la date de publication ne représente pas l’épisode ;
+- l’URL contient l’identifiant interne de l’article, par exemple `56101`.
+
+La stratégie retenue à ce stade est :
+
+```text
+coulisses-tv:<guid>
+```
+
+Si le flux change et ne fournit plus de `guid`, le lien de l’article pourra servir de fallback, car il pointe vers la même ressource publique.
+
 ### Flux « Programmes inédits »
 
 URL :

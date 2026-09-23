@@ -1,6 +1,7 @@
 import { XMLParser } from 'fast-xml-parser';
 
 const RSS_SOURCE_URL = 'https://www.coulisses-tv.fr/index.php/component/k2/itemlist/category/14-divertissements?format=feed&type=rss';
+const EPISODE_ID_SOURCE_PREFIX = 'coulisses-tv';
 const SHOW_TITLE = 'cauchemar en cuisine';
 const UNSEEN_EPISODE_KEYWORD = 'inédit';
 
@@ -17,6 +18,7 @@ type RssItem = {
 };
 
 type EpisodeArticle = {
+	id: string;
 	title: string;
 	link: string;
 	guid: string;
@@ -74,6 +76,16 @@ function extractGuid(guid: RssGuid | undefined): string {
 	return toStringValue(guid?.['#text']);
 }
 
+function normalizeIdentifierPart(value: string): string {
+	return value.trim();
+}
+
+function createEpisodeArticleId(article: Pick<EpisodeArticle, 'guid' | 'link'>): string {
+	const sourceIdentifier = normalizeIdentifierPart(article.guid || article.link);
+
+	return `${EPISODE_ID_SOURCE_PREFIX}:${sourceIdentifier}`;
+}
+
 function includesNormalized(value: string, search: string): boolean {
 	return value.toLocaleLowerCase('fr-FR').includes(search);
 }
@@ -94,6 +106,7 @@ function toEpisodeArticle(item: RssItem): EpisodeArticle | null {
 	}
 
 	return {
+		id: createEpisodeArticleId({ guid, link }),
 		title,
 		link,
 		guid,
