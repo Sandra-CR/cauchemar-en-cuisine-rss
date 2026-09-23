@@ -1,40 +1,49 @@
-/**
- * Welcome to Cloudflare Workers!
- *
- * This is a template for a Scheduled Worker: a Worker that can run on a
- * configurable interval:
- * https://developers.cloudflare.com/workers/platform/triggers/cron-triggers/
- *
- * - Run `npm run dev` in your terminal to start a development server
- * - Run `curl "http://localhost:8787/__scheduled?cron=*+*+*+*+*"` to see your Worker in action
- * - Run `npm run deploy` to publish your Worker
- *
- * Bind resources to your Worker in `wrangler.jsonc`. After adding bindings, a type definition for the
- * `Env` object can be regenerated with `npm run cf-typegen`.
- *
- * Learn more at https://developers.cloudflare.com/workers/
- */
+import { XMLParser } from 'fast-xml-parser';
+
+const RSS_URL = 'https://www.coulisses-tv.fr/index.php/flux-rss-tous-les-articles?format=feed&type=rss';
 
 export default {
-	async fetch(req) {
+	async fetch(req): Promise<Response> {
 		const url = new URL(req.url);
-		url.pathname = '/__scheduled';
-		url.searchParams.append('cron', '* * * * *');
-		return new Response(`To test the scheduled handler, ensure you have used the "--test-scheduled" then try running "curl ${url.href}".`);
+
+		if (url.pathname === '/__scheduled') {
+			return new Response('Scheduled Worker endpoint');
+		}
+
+		return new Response('Cauchemar en cuisine alert', {
+			status: 200,
+		});
 	},
 
-	// The scheduled handler is invoked at the interval set in our wrangler.jsonc's
-	// [[triggers]] configuration.
 	async scheduled(event, env, ctx): Promise<void> {
-		// A Cron Trigger can make requests to other endpoints on the Internet,
-		// publish to a Queue, query a D1 Database, and much more.
-		//
-		// We'll keep it simple and make an API call to a Cloudflare API:
-		let resp = await fetch('https://api.cloudflare.com/client/v4/ips');
-		let wasSuccessful = resp.ok ? 'success' : 'fail';
+		const response = await fetch(RSS_URL);
 
-		// You could store this result in KV, write to a D1 Database, or publish to a Queue.
-		// In this template, we'll just log the result:
-		console.log(`trigger fired at ${event.cron}: ${wasSuccessful}`);
+		if (!response.ok) {
+			throw new Error(`RSS request failed: ${response.status} ${response.statusText}`);
+		}
+
+		const rss = await response.text();
+
+		const parser = new XMLParser();
+		const feed = parser.parse(rss);
+
+		const items = feed?.rss?.channel?.item ?? [];
+
+		console.log(`Found ${items.length} RSS items`);
+
+		for (const item of items) {
+			const title = item.title ?? '';
+
+			if (!title.toLowerCase().includes('cauchemar en cuisine')) {
+				continue;
+			}
+
+			console.log({
+				title: item.title,
+				link: item.link,
+				pubDate: item.pubDate,
+				description: item.description,
+			});
+		}
 	},
 } satisfies ExportedHandler<Env>;
