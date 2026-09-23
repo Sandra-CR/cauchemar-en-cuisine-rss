@@ -1,6 +1,27 @@
 import { XMLParser } from 'fast-xml-parser';
 
-const RSS_URL = 'https://www.coulisses-tv.fr/index.php/flux-rss-tous-les-articles?format=feed&type=rss';
+const RSS_SOURCE_URL = 'https://www.coulisses-tv.fr/index.php/flux-rss-tous-les-articles?format=feed&type=rss';
+
+class RssSourceError extends Error {
+	constructor(
+		message: string,
+		readonly status: number,
+		readonly statusText: string,
+	) {
+		super(message);
+		this.name = 'RssSourceError';
+	}
+}
+
+async function fetchRssSource(sourceUrl = RSS_SOURCE_URL): Promise<string> {
+	const response = await fetch(sourceUrl);
+
+	if (!response.ok) {
+		throw new RssSourceError(`RSS request failed: ${response.status} ${response.statusText}`, response.status, response.statusText);
+	}
+
+	return response.text();
+}
 
 export default {
 	async fetch(req): Promise<Response> {
@@ -16,13 +37,7 @@ export default {
 	},
 
 	async scheduled(event, env, ctx): Promise<void> {
-		const response = await fetch(RSS_URL);
-
-		if (!response.ok) {
-			throw new Error(`RSS request failed: ${response.status} ${response.statusText}`);
-		}
-
-		const rss = await response.text();
+		const rss = await fetchRssSource();
 
 		const parser = new XMLParser();
 		const feed = parser.parse(rss);
