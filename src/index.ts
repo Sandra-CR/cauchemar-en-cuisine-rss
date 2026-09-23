@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 
-const RSS_SOURCE_URL = 'https://www.coulisses-tv.fr/index.php/flux-rss-tous-les-articles?format=feed&type=rss';
+const RSS_SOURCE_URL = 'https://www.coulisses-tv.fr/index.php/component/k2/itemlist/category/14-divertissements?format=feed&type=rss';
 
 class RssSourceError extends Error {
 	constructor(
