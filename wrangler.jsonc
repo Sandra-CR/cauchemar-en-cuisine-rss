@@ -8,14 +8,12 @@
 	"main": "src/index.ts",
 	"compatibility_date": "2026-09-21",
 	"observability": {
-		"enabled": true
+		"enabled": true,
 	},
 	"triggers": {
-		"crons": [
-			"* * * * *"
-		]
+		"crons": ["0 9 * * *", "0 18 * * *"],
 	},
-	"upload_source_maps": true
+	"upload_source_maps": true,
 	/**
 	 * Smart Placement
 	 * https://developers.cloudflare.com/workers/configuration/smart-placement/#smart-placement
