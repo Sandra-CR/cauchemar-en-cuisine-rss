@@ -6,11 +6,13 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev --test-scheduled",
 		"start": "wrangler dev --test-scheduled",
+		"test": "node --import tsx --test \"src/**/*.test.ts\"",
 		"check": "tsc --noEmit",
 		"cf-typegen": "wrangler types"
 	},
 	"devDependencies": {
 		"@types/node": "^26.6.2",
+		"tsx": "^4.23.15",
 		"typescript": "^5.5.2",
 		"wrangler": "^4.137.0"
 	},
