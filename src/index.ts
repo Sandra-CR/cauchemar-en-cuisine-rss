@@ -1,6 +1,29 @@
 import { XMLParser } from 'fast-xml-parser';
 
 const RSS_SOURCE_URL = 'https://www.coulisses-tv.fr/index.php/component/k2/itemlist/category/14-divertissements?format=feed&type=rss';
+const SHOW_TITLE = 'cauchemar en cuisine';
+const UNSEEN_EPISODE_KEYWORD = 'inédit';
+
+type RssGuid = string | { '#text'?: unknown; '@_isPermaLink'?: unknown };
+type UnknownRecord = Record<string, unknown>;
+
+type RssItem = {
+	title?: unknown;
+	link?: unknown;
+	guid?: RssGuid;
+	description?: unknown;
+	pubDate?: unknown;
+	category?: unknown;
+};
+
+type EpisodeArticle = {
+	title: string;
+	link: string;
+	guid: string;
+	description: string;
+	pubDate: string;
+	category: string;
+};
 
 class RssSourceError extends Error {
 	constructor(
@@ -23,6 +46,73 @@ async function fetchRssSource(sourceUrl = RSS_SOURCE_URL): Promise<string> {
 	return response.text();
 }
 
+function normalizeRssItems(value: unknown): RssItem[] {
+	if (!value) {
+		return [];
+	}
+
+	return Array.isArray(value) ? value.filter(isRssItem) : isRssItem(value) ? [value] : [];
+}
+
+function isRssItem(value: unknown): value is RssItem {
+	return typeof value === 'object' && value !== null;
+}
+
+function isRecord(value: unknown): value is UnknownRecord {
+	return typeof value === 'object' && value !== null;
+}
+
+function toStringValue(value: unknown): string {
+	return typeof value === 'string' ? value.trim() : '';
+}
+
+function extractGuid(guid: RssGuid | undefined): string {
+	if (typeof guid === 'string') {
+		return guid.trim();
+	}
+
+	return toStringValue(guid?.['#text']);
+}
+
+function includesNormalized(value: string, search: string): boolean {
+	return value.toLocaleLowerCase('fr-FR').includes(search);
+}
+
+function isCauchemarEnCuisineArticle(item: EpisodeArticle): boolean {
+	const searchableText = `${item.title} ${item.description}`;
+
+	return includesNormalized(searchableText, SHOW_TITLE) && includesNormalized(searchableText, UNSEEN_EPISODE_KEYWORD);
+}
+
+function toEpisodeArticle(item: RssItem): EpisodeArticle | null {
+	const title = toStringValue(item.title);
+	const link = toStringValue(item.link);
+	const guid = extractGuid(item.guid);
+
+	if (!title || !link || !guid) {
+		return null;
+	}
+
+	return {
+		title,
+		link,
+		guid,
+		description: toStringValue(item.description),
+		pubDate: toStringValue(item.pubDate),
+		category: toStringValue(item.category),
+	};
+}
+
+function parseEpisodeArticles(rss: string): EpisodeArticle[] {
+	const parser = new XMLParser();
+	const feed = parser.parse(rss) as unknown;
+	const rssNode = isRecord(feed) ? feed.rss : null;
+	const channel = isRecord(rssNode) && isRecord(rssNode.channel) ? rssNode.channel : null;
+	const items = normalizeRssItems(channel?.item);
+
+	return items.map(toEpisodeArticle).filter((item): item is EpisodeArticle => item !== null).filter(isCauchemarEnCuisineArticle);
+}
+
 export default {
 	async fetch(req): Promise<Response> {
 		const url = new URL(req.url);
@@ -38,27 +128,12 @@ export default {
 
 	async scheduled(event, env, ctx): Promise<void> {
 		const rss = await fetchRssSource();
+		const articles = parseEpisodeArticles(rss);
 
-		const parser = new XMLParser();
-		const feed = parser.parse(rss);
+		console.log(`Found ${articles.length} Cauchemar en cuisine candidate article(s)`);
 
-		const items = feed?.rss?.channel?.item ?? [];
-
-		console.log(`Found ${items.length} RSS items`);
-
-		for (const item of items) {
-			const title = item.title ?? '';
-
-			if (!title.toLowerCase().includes('cauchemar en cuisine')) {
-				continue;
-			}
-
-			console.log({
-				title: item.title,
-				link: item.link,
-				pubDate: item.pubDate,
-				description: item.description,
-			});
+		for (const article of articles) {
+			console.log(article);
 		}
 	},
 } satisfies ExportedHandler<Env>;
