@@ -13,6 +13,12 @@
 	"triggers": {
 		"crons": ["0 9 * * *", "0 18 * * *"],
 	},
+	"kv_namespaces": [
+		{
+			"binding": "NOTIFIED_EPISODES",
+			"id": "1faca4fa2d1b4b13a817e7e4b437f426",
+		},
+	],
 	"upload_source_maps": true,
 	/**
 	 * Smart Placement
